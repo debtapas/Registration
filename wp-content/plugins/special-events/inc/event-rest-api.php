@@ -16,12 +16,12 @@
 	    register_rest_route('special-events/v1', '/create-event', array(
 	        'methods'  => 'POST',
 	        'callback' => 'create_event',
+	        'permission_callback' => 'create_rest_check_permission'
 	    ));
 
 	    register_rest_route('special-events/v1', '/update-event/(?P<id>\d+)', array(
 	        'methods'  => 'POST',
 	        'callback' => 'update_event',
-	        // 'permission_callback' => 'rest_check_permission'
 	    ));
 
 	    register_rest_route('special-events/v1', '/delete-event/(?P<id>\d+)', array(
@@ -50,25 +50,50 @@
 	         Create the new event post
 	======================================== */
 	function create_event($request){
-		$title = $request->get_param( 'title' );
-    	$content = $request->get_param( 'content' );
+		$params = $request->get_params();
+		$title = $params['title'];
+    	$content = $params['content'];
+    	$terms_array = explode(',', sanitize_text_field($params['categories']));
+    	
 
-		$title = $request->get_param('title');
-		$content = $request->get_param('content');
 		$args = array(
 			'post_title' 	=> $title,
 			'post_content'	=> $content,
 			'post_type'		=> 'events',
 			'post_status'	=> 'publish'
 		);
-
 		$post_id = wp_insert_post($args);
+				
+    		
+			foreach( $terms_array as $term){
+				$term_id = term_exists( $term, 'events_tax' );
 
-		if(is_wp_error($post_id)){
-			return new WP_REST_Response( array( 'error' => 'Could not create post' ), 500 );
-		}else{
-			return new WP_REST_Response( array( 'message' => 'Post created successfully', 'post_id' => $post_id ), 200 );
-		}
+				if (empty($term_id)) {
+					$term_id = wp_insert_term( $term, 'events_tax' );
+				}
+
+    			// Assign the category to the custom post
+			    if (!is_wp_error($term_id) && !has_term($term_id['term_id'], 'events_tax', $post_id)) {
+			        wp_set_post_terms($post_id, $term_id['term_id'], 'events_tax', true);
+				    }
+		    	}
+    	if ($post_id) {
+    			echo 'Post Create successfully';
+    		}else{
+    			echo 'Post is not create.';
+    		}
+	}
+
+	// Permission callback to check if the user has the necessary permissions
+	function create_rest_check_permission($request){
+		$authkey 	= $request->get_param('authkey');	
+		$option_auth_value = get_option('auth_key_option_value');
+
+		if($option_auth_value == $authkey) {
+			return true;
+	    } else {
+	        return new WP_Error('rest_forbidden', __('You do not have permission to access this resource.'), array('status' => 403));
+	    }
 	}
 
 	/* ========================================
@@ -122,8 +147,3 @@
 		}
 
 	}
-
-	// Permission callback to check if the user has the necessary permissions
-	// function rest_check_permission(){
-	// 	return current_user_can('edit_posts');
-	// }

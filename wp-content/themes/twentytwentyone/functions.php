@@ -719,6 +719,8 @@ function registration_form_data(){
 	$phone_number 			= $data['phone_number'];
 	$additional_information = sanitize_text_field($data['additional_information']);
 
+	dd($data);
+
 	if( empty($email) ){
 
 		$msg = "Please enter your mail id";
