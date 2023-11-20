@@ -80,7 +80,7 @@
     	if ($post_id) {
     			echo 'Post Create successfully';
     		}else{
-    			echo 'Post is not create.';
+    			echo 'Post is unable to create';
     		}
 	}
 
