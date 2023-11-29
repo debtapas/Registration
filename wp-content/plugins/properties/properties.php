@@ -28,7 +28,7 @@
 	}
 
 	//Register/Unregister a custom properties
-	require plugin_dir_path(__FILE__). 'inc/properties_details.php';
+	require PROP_PLUGIN_DIR . 'inc/properties_details.php';
 
 	//Adding CSS and JS files ~~~~~~~~~~~~~~~~
 	if (!function_exists('prop_plugin_scripts')) {

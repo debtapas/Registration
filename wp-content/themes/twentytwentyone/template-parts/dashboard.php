@@ -24,11 +24,10 @@
 
                     $add_infornations_tb = $wpdb->prefix . 'additional_information';
                     $add_infos = $wpdb->get_results($wpdb->prepare( "SELECT * FROM $add_infornations_tb WHERE user_id=%d", $user_id ), ARRAY_A);
-
-                    // dd($user_meta);
-
                 ?>
+
                 <a href="<?php echo esc_url( wp_logout_url('login') ); ?>" class="btn-logout"> Log Out</a>
+                <img class="profile-img" src="<?php echo $user_meta['avatar_path'][0]; ?>">
                 <p><strong>User First Name: </strong><?php echo $user_meta['first_name'][0]; ?></p>
                 <p><strong>User Last Name: </strong><?php echo $user_meta['last_name'][0]; ?></p>
                 <p><strong>User Phone Number: </strong><?php echo $user_meta['phone_number'][0]; ?></p>

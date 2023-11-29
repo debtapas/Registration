@@ -486,6 +486,7 @@ function twenty_twenty_one_scripts() {
 	wp_localize_script('main-js', 'registration_vars', 
 		array(
         	'ajax_url' => admin_url('admin-ajax.php'),
+        	// 'avatar_nonce' => wp_create_nonce('avatar_nonce'),
    		 ));
 
 	
@@ -707,55 +708,99 @@ function registration_form_data(){
 	global $wpdb;
 	$add_info = $wpdb->prefix . 'additional_information';
 	$msg = '';
-	$reg_data = $_POST['reg_form_data'];
-	parse_str($reg_data, $data);
-	$user_name 				= $data['user_name'];
-	$email 					= $data['email'];
-	$pass 					= $data['pass'];
-	$conf_pass				= $data['re_pass'];
+	$flag = false;
+	$file_url = '';
+	
+	$user_name 				= sanitize_text_field($_POST['user_name']);
+	$email 					= sanitize_text_field($_POST['email']);
+	$pass 					= sanitize_text_field($_POST['pass']);
+	$conf_pass				= sanitize_text_field($_POST['re_pass']);
 
-	$first_name 			= $data['first_name'];
-	$last_name 				= $data['last_name'];
-	$phone_number 			= $data['phone_number'];
-	$additional_information = sanitize_text_field($data['additional_information']);
+	$first_name 			= sanitize_text_field($_POST['first_name']);
+	$last_name 				= sanitize_text_field($_POST['last_name']);
+	$phone_number 			= sanitize_text_field($_POST['phone_number']);
+	$additional_information = sanitize_text_field($_POST['additional_information']);
+	$type_allowed = array('image/jpeg', 'image/jpg', 'image/png');
 
-	if( empty($email) ){
+	if(empty($first_name)){
+		$msg = "Please enter your first name";
 
+	}elseif( empty($last_name) ){
+		$msg = "Please enter your last name";
+
+	}elseif( empty($email) ){
 		$msg = "Please enter your mail id";
+		
+
 	}elseif(email_exists($email)){
-
 		$msg = "This email already registered";
+		
+
 	}elseif(empty($user_name)){
-
 		$msg = "Please enter your user name";
-	}elseif( $pass != $conf_pass ){
+		
 
+	}elseif(empty($phone_number)){
+		$msg = "Please enter your phone number";
+
+	}elseif(empty($additional_information)){
+		$msg = "Please fill the additional information";
+		
+
+	}elseif( empty($pass) ){
+		$msg = "Password field is empty";
+		
+
+	}elseif( $pass != $conf_pass ){
 		$msg = "Password has not mached.";
+		
+
+	}elseif ( !isset($_FILES['avatar_file']) && $_FILES['avatar_file']['name'] == '' ){
+		$msg = "Image empty.";
+		
+	}elseif( !in_array($_FILES['avatar_file']['type'], $type_allowed) ){
+		$msg = "File type not matched.";
 	}else{
 
-		$user_id = wp_insert_user(array(
-		    'user_nicename'=>  $user_name,
-		    'user_login' 	=>  $email,
-		    'user_email'  	=>  $email,
-		    'user_pass'  	=>  $pass, 
-		    'role'			=>	'author',
+		$uploaded_file = wp_handle_upload($_FILES['avatar_file'], array('test_form' => false));
+        if( $uploaded_file && !isset($uploaded_file['error'])){
+        	
+        	$file_url = $uploaded_file['url'];
 
-		    'meta_input'  => array(
-		    	'first_name' 			=> $first_name,
-		    	'last_name' 			=> $last_name,
-		    	'phone_number' 			=> $phone_number,
-		    )
-		));
+        	$user_id = wp_insert_user(array(
+			    'user_nicename'	=>  $user_name,
+			    'user_login' 	=>  $email,
+			    'user_email'  	=>  $email,
+			    'user_pass'  	=>  $pass, 
+			    'role'			=>	'author',
 
-		$wpdb->insert( $add_info,
-        array(
-            'user_id' => $user_id,
-		    'add_info'=> $additional_information
-        )
-    );
-		$msg = "User register successful";
+			    'meta_input'  => array(
+			    	'first_name' 	=> $first_name,
+			    	'last_name' 	=> $last_name,
+			    	'phone_number' 	=> $phone_number,
+			    	'avatar_path'	=> $file_url
+			    )
+			));
+
+			$wpdb->insert( $add_info,
+		    array(
+		        'user_id' => $user_id,
+			    'add_info'=> $additional_information
+		    	)
+			);
+			$flag = true;
+			$msg = "User create successfully.";	
+        }else{
+			$msg = $uploaded_file['error'];
+        }	    	
 	}
-	wp_send_json($msg);
+	
+
+	$response['message'] = $msg;
+	$response['flag'] = $flag;
+	$response['avatar_path'] = esc_url($file_url);
+
+	wp_send_json($response);
 }
 
 add_action("wp_ajax_custom_registration", "registration_form_data");
